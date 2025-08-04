@@ -1,5 +1,7 @@
+# 
 import os
 from tkinter import Tk, filedialog
+import sorter
 
 def select_directory(tit=''):
     root = Tk()
@@ -8,6 +10,8 @@ def select_directory(tit=''):
     root.destroy()
     return folder if folder else os.getcwd()
 
-sour = select_directory("Выберите исходную директорию с фотографиями")
-terg = select_directory("Выберите целевую директорию для сохранения обработанных фотографий")
-print(f"Выбраны: \n{sour}\n{terg}")
+s = select_directory("Выберите исходную директорию с фотографиями")
+t = select_directory("Выберите целевую директорию для сохранения обработанных фотографий")
+print(f"Выбраны: \n{s}\n{t}")
+# y N 
+sorter.photosorter(s,t)

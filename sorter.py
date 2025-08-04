@@ -9,7 +9,7 @@ from PIL.ExifTags import TAGS
 # Функция для получения абсолютного пути изображения
 def find_images(root_dir):
     """Ищет все изображения в корневой директории и возвращает путь"""
-    extensions = ('*.jpg', '*.jpeg', '*.png')
+    extensions = ('*.jpg', '*.jpeg', '*.png', '*.bmp')
     return [path for ext in extensions for path in root_dir.rglob(ext)]
 
 # Функция для вычисления правильного угла поворота
@@ -210,13 +210,18 @@ def process_image(image_path, target_dir):
     except Exception as e:
         print(f"Ошибка при обработке {image_path}: {e}")
 
+def photosorter(s,d):
+    source_directory = Path(s)
+    destination_directory = Path(d)
+    if os.path.exists(source_directory):
+        all_images = find_images(source_directory)
+        for image_path in all_images:
+            process_image(image_path, destination_directory)
+    else:
+        print(f'Директория {source_directory} не существует')
 
 # Основной блок программы
 if __name__ == "__main__":
-    source_directory = Path("d:\\repo\\photo-sorter\\source\\")
-    destination_directory = Path("d:\\repo\\photo-sorter\\target\\")
-    
-    all_images = find_images(source_directory)
-    
-    for image_path in all_images:
-        process_image(image_path, destination_directory)
+    source_directory = ("d:/_proj/_python/photo-sorter/source2/")
+    destination_directory = ("d:/_proj/_python/photo-sorter/target/")
+    photosorter(source_directory,destination_directory)    
