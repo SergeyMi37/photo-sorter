@@ -70,7 +70,7 @@ pyinstaller --onefile --windowed --add-data "путь_до_файла;назва
 ```
 Например, если у вас есть картинка `"logo.png"` в корне проекта, команда будет выглядеть так:
 ```bash
-pyinstaller --onefile --windowed --add-data "logo.png;." имя_скрипта.py
+pyinstaller --onefile --windowed --icon doc/icon.ico --add-data "./doc/icon.ico;."  selector-dirs-tk.py
 ```
 Файл скопируется в тот же каталог, где находится исполняемый файл.
 

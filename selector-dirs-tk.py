@@ -38,29 +38,37 @@ def execute_process():
 # Настройка основного окна
 root = tk.Tk()
 root.title("Сортировка файлов. созданием поддиректорий с датой создания, переворотом и обратным геокодированием на основе EXIF данных")
-root.geometry("800x300")
-
+root.geometry("850x130")
+# Установка иконки окна (для Windows нужен формат .ico)
+#root.iconbitmap("doc/icon.ico")  # icon.ico - имя файла вашей иконки
 # Исходный каталог
 initial_directory = os.getcwd()
-source_label = tk.Label(root, text="Выберите исходную директорию с фотографиями:")
-source_label.pack()
+
+# Используем grid для размещения элементов
+source_label = tk.Label(root, text="Исходный каталог:")
+source_label.grid(row=0, column=0, sticky='e')  # Помещаем элемент в первую строку, нулевой столбец
+
 source_entry = tk.Entry(root, width=100)
-source_entry.insert(0, initial_directory) # Устанавливаем начальное значение
-source_entry.pack()
+source_entry.insert(0, initial_directory)  # Устанавливаем начальное значение
+source_entry.grid(row=0, column=1, padx=(5, 0))  # Расположили рядом справа от лейбла
+
 source_browse_button = tk.Button(root, text="Обзор...", command=select_source_dir)
-source_browse_button.pack()
+source_browse_button.grid(row=0, column=2, padx=(5, 0))  # Расположили справа от поля ввода
 
 # Целевой каталог
 target_label = tk.Label(root, text="Целевой каталог:")
-target_label.pack()
+target_label.grid(row=1, column=0, sticky='e')  # Следующая строка
+
 target_entry = tk.Entry(root, width=100)
-target_entry.pack()
+target_entry.grid(row=1, column=1, padx=(5, 0))
+
 target_browse_button = tk.Button(root, text="Обзор...", command=select_target_dir)
-target_browse_button.pack()
+target_browse_button.grid(row=1, column=2, padx=(5, 0))
+
 
 # Выбор режима
 mode_label = tk.Label(root, text="Режим:")
-mode_label.pack()
+mode_label.grid(row=2, column=0, sticky='e')
 
 #modes = ["Только посчитать файлы", "Создавать подкаталоги с датой создания и переворачивать", "И прикладывать к дате и адрес на основе геолокации"]
 # Готовим словарь режимов
@@ -73,19 +81,19 @@ modes_dict = {
 # Список отображаемых значений
 modes_list = list(modes_dict.keys())
 
-mode_combobox = ttk.Combobox(root, values=modes_list,width=100)
+mode_combobox = ttk.Combobox(root, values=modes_list,width=90)
 mode_combobox.current(0)  # Устанавливаем первый пункт по умолчанию
-mode_combobox.pack()
+mode_combobox.grid(row=2, column=1,sticky='w', padx=(5, 0))
 
 # Кнопка запуска
 execute_button = tk.Button(root, text="Запустить", command=execute_process)
-execute_button.place(x=350, y=230)
-#execute_button.pack()
+#execute_button.place(x=350, y=230)
+execute_button.grid(row=2, column=2, sticky='w')
 
 # Кнопка закрытия
 exit_button = tk.Button(root, text="Выход", command=root.destroy)
-exit_button.place(x=420, y=230)
-#exit_button.pack()
+#exit_button.place(x=420, y=230)
+exit_button.grid(row=3, column=1, sticky='w')
 
 def on_escape(event):
     root.destroy()  # Закрываем главное окно приложения
