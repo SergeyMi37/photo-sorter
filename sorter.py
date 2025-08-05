@@ -130,7 +130,8 @@ def exif_gps_to_decimal(exif_data):
         return None
 
 
-def process_image(image_path, target_dir):
+def process_image(image_path, target_dir,mode='create'):
+    msg = 'ok'
     try:
         image_path = Path(image_path)
         target_dir = Path(target_dir)
@@ -169,7 +170,7 @@ def process_image(image_path, target_dir):
                 file_creation_time = os.path.getctime(image_path)
                 # Форматируем дату в формате "ГГГГ:ММ:ДД"
                 date_taken = datetime.datetime.fromtimestamp(file_creation_time).strftime('%Y:%m:%d')
-                print(f"Используем дату файла: {date_taken} для {image_path}")
+                #print(f"Используем дату файла: {date_taken} для {image_path}")
             except Exception as e:
                 print(f"Не удалось получить дату файла для {image_path}: {e}")
                 return
@@ -178,7 +179,7 @@ def process_image(image_path, target_dir):
         base_folder = target_dir / date_taken[:10].replace(':', '-')
         address = ""        
         # Обработка геолокационных данных, если они существуют
-        if exif_dict.get("GPSInfo"):
+        if mode=='geotag' and exif_dict.get("GPSInfo"):
             lat, lon = exif_gps_to_decimal(exif_dict)
             #print(lat,lon)
             if lat:
@@ -189,13 +190,14 @@ def process_image(image_path, target_dir):
                     address = sanitize_filename(location.address)
                 except Exception as geocode_err:
                     print(f"Ошибка геокодирования: {geocode_err}")        
+
         # Создание конечной директории с учётом адреса
-        output_folder = base_folder
         if address:
             fname = f"{date_taken[:10]}_{address.replace(' ', '_').replace('__', '_')}"
-            output_folder = base_folder / f"{fname.replace(':', '-')}" # Убираем двоеточия
-            print(output_folder)
-            
+            base_folder = target_dir / f"{fname.replace(':', '-')}" # Убираем двоеточия
+            #print(output_folder)
+        
+        output_folder = base_folder        
         output_folder.mkdir(parents=True, exist_ok=True)
         
         # Финальный путь выходного файла
@@ -209,19 +211,25 @@ def process_image(image_path, target_dir):
     
     except Exception as e:
         print(f"Ошибка при обработке {image_path}: {e}")
+    return msg
 
-def photosorter(s,d):
+def photosorter(s,d,mode):
+    msg = 'ok'
     source_directory = Path(s)
     destination_directory = Path(d)
     if os.path.exists(source_directory):
         all_images = find_images(source_directory)
+        if mode=='count':
+            msg = f'Будет обработано {len(all_images)} файлов'
+            return msg
         for image_path in all_images:
-            process_image(image_path, destination_directory)
+            res = process_image(image_path, destination_directory,mode=mode)
     else:
-        print(f'Директория {source_directory} не существует')
+        msg = (f'Директория {source_directory} не существует')
+    return msg
 
 # Основной блок программы
 if __name__ == "__main__":
     source_directory = ("d:/_proj/_python/photo-sorter/source2/")
     destination_directory = ("d:/_proj/_python/photo-sorter/target/")
-    photosorter(source_directory,destination_directory)    
+    photosorter(source_directory,destination_directory)

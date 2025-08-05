@@ -1,5 +1,2 @@
 Pillow==9.5.0
-#exif==1.6.1
-#osmnx==1.5.1
 geopy==2.3.0
-#piexif
