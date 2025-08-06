@@ -46,7 +46,7 @@ pip install pyinstaller
 #### 3. Сборка с помощью PyInstaller
 Откройте терминал и перейдите в папку вашего проекта. Затем выполните команду:
 ```bash
-pyinstaller --onefile --windowed selector-dirs-tk.py
+pyinstaller --onefile --windowed photosorter.py
 ```
 Параметры команды:
 - `--onefile`: Создает один файл `.exe`, содержащий всю необходимую библиотеку.
