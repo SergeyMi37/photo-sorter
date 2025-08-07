@@ -213,7 +213,17 @@ def process_image(image_path, target_dir,mode='create'):
         print(f"Ошибка при обработке {image_path}: {e}")
     return msg
 
-def photosorter(s,d,mode):
+def photosorter(s,d,mode, progress_callback=None):
+    # Получаем список всех файлов
+    #files = [...]  # ваш код для получения списка файлов
+    #total_files = len(files)
+    
+    #for i, file in enumerate(files, 1):
+        # Ваш код обработки файла
+        
+   
+    #return f"Обработано {total_files} файлов"
+
     msg = 'ok'
     source_directory = Path(s)
     destination_directory = Path(d)
@@ -222,8 +232,14 @@ def photosorter(s,d,mode):
         if mode=='count':
             msg = f'Будет обработано {len(all_images)} файлов'
             return msg
-        for image_path in all_images:
+        total_files = len(all_images)
+        #for image_path in all_images:
+        for i, image_path in enumerate(all_images, 1):
             res = process_image(image_path, destination_directory,mode=mode)
+            # Обновляем прогресс
+            if progress_callback:
+                progress_callback(i, total_files)
+            
     else:
         msg = (f'Директория {source_directory} не существует')
     return msg
