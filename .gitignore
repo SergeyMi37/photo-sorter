@@ -33,7 +33,7 @@ MANIFEST
 *.manifest
 *.spec
 
-#photosorter_*.*
+photosorter_*.*
 
 # Installer logs
 pip-log.txt
