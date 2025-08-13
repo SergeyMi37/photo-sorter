@@ -1,10 +1,9 @@
-import os, datetime
+import os, datetime, pickle
 from pathlib import Path
 from PIL import Image
 from geopy.geocoders import Nominatim
 from PIL.ExifTags import TAGS
 #from datetime import datetime
-
 
 # Функция для получения абсолютного пути изображения
 def find_images(root_dir):
@@ -61,8 +60,8 @@ def reverse_geocode(lat, lon):
         return 1, (f'Ошибка обработки запроса: {e}')
 
 def sanitize_filename(s):
-    """Очистка строки для использования в именах файлов/директорий"""
-    return ''.join(c if c.isalnum() or c in (' ', '.', '_', '-') else '_' for c in s).strip()
+    """Очистка строки для использования в именах файлов/директорий и ограничим длину"""
+    return ''.join(c if c.isalnum() or c in (' ', '.', '_', '-') else '_' for c in s).strip()[:50]
 
 def convert_gps_to_decimal(gps_info):
     """
@@ -130,7 +129,7 @@ def exif_gps_to_decimal(exif_data):
         return None
 
 
-def process_image(image_path, target_dir,mode='create'):
+def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entries=0):
     msg = 'ok'
     try:
         image_path = Path(image_path)
@@ -172,8 +171,9 @@ def process_image(image_path, target_dir,mode='create'):
                 date_taken = datetime.datetime.fromtimestamp(file_creation_time).strftime('%Y:%m:%d')
                 #print(f"Используем дату файла: {date_taken} для {image_path}")
             except Exception as e:
-                print(f"Не удалось получить дату файла для {image_path}: {e}")
-                return
+                msg = f"Не удалось получить дату файла для {image_path}: {e}"
+                print(msg)
+                return msg, geo_cache, new_entries
         
         # Базовая структура директории
         base_folder = target_dir / date_taken[:10].replace(':', '-')
@@ -184,16 +184,25 @@ def process_image(image_path, target_dir,mode='create'):
             #print(lat,lon)
             if lat:
                 try:
-                    # Получаем адрес через службу OSM
-                    locator = Nominatim(user_agent="myGeocoder")
-                    location = locator.reverse(f"{round(lat,6)}, {round(lon,6)}")
-                    address = sanitize_filename(location.address)
+                    cache_key = f"{round(lat, 7)},{round(lon, 7)}"
+                    #cache_key = f"{lat},{lon}"
+                    #print(cache_key)
+                    if cache_key in geo_cache:
+                        address = geo_cache[cache_key]
+                    else:
+                        locator = Nominatim(user_agent="myGeocoder")
+                        location = locator.reverse(cache_key)
+                        address = sanitize_filename(location.address)
+                        geo_cache[cache_key] = address
+                        new_entries += 1
+                        #print(address)
+                        
                 except Exception as geocode_err:
                     print(f"Ошибка геокодирования: {geocode_err}")        
 
         # Создание конечной директории с учётом адреса
         if address:
-            fname = f"{date_taken[:10]}_{address.replace(' ', '_').replace('__', '_')}"
+            fname = f"{date_taken[:10]}_{address.replace(' ', '_').replace('__', '_')}_{cache_key}"
             base_folder = target_dir / f"{fname.replace(':', '-')}" # Убираем двоеточия
             #print(output_folder)
         
@@ -210,19 +219,21 @@ def process_image(image_path, target_dir,mode='create'):
         os.utime(final_output_path, (orig_create_time, orig_modify_time))
     
     except Exception as e:
-        print(f"Ошибка при обработке {image_path}: {e}")
-    return msg
+        msg = f"Ошибка при обработке {image_path}: {e}"
+        print(msg)
+    return msg, geo_cache, new_entries
 
 def photosorter(s,d,mode, progress_callback=None):
-    # Получаем список всех файлов
-    #files = [...]  # ваш код для получения списка файлов
-    #total_files = len(files)
-    
-    #for i, file in enumerate(files, 1):
-        # Ваш код обработки файла
-        
-   
-    #return f"Обработано {total_files} файлов"
+    # Имя файла для кэша
+    CACHE_FILE = "photosorter_cache.pkl"
+    # Загружаем кэш из файла, если он существует
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, 'rb') as f:
+            geo_cache = pickle.load(f)
+    else:
+        geo_cache = {}
+    # Счётчик новых запросов
+    new_entries = 0
 
     msg = 'ok'
     source_directory = Path(s)
@@ -235,11 +246,20 @@ def photosorter(s,d,mode, progress_callback=None):
         total_files = len(all_images)
         #for image_path in all_images:
         for i, image_path in enumerate(all_images, 1):
-            res = process_image(image_path, destination_directory,mode=mode)
+            res, geo_cache, new_entries = process_image(
+                image_path, 
+                destination_directory,
+                mode=mode,
+                geo_cache= geo_cache,
+                new_entries= new_entries)
             # Обновляем прогресс
             if progress_callback:
                 progress_callback(i, total_files)
-            
+        # Сохраняем кэш при завершении (если были изменения)
+        if new_entries > 0:
+            with open(CACHE_FILE, "wb") as f:
+                pickle.dump(geo_cache, f)
+
     else:
         msg = (f'Директория {source_directory} не существует')
     return msg
