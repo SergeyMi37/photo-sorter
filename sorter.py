@@ -5,6 +5,24 @@ from geopy.geocoders import Nominatim
 from PIL.ExifTags import TAGS
 #from datetime import datetime
 
+# Функция для получения даты из имени файла
+def get_date_images(name):
+    dat = None
+    # IMG-20171007-WA*.jpeg
+    if name.startswith('IMG-'):
+        dat = datetime.datetime.strptime(name[4:14], '%Y%m%d')
+    # IMG_20171006_*.jpg
+    if name.startswith('IMG_'):
+        dat = datetime.datetime.strptime(name[4:14], '%Y%m%d')
+    # photo_*@24-03-2025_*.jpg
+    if name.startswith('photo_'):
+        if name.endswith('.jpg'):
+            dat = datetime.datetime.strptime(name[6:16], '%d-%m-%Y')
+        else:
+            dat = datetime.datetime.strptime(name[6:16], '%d-%m-%Y')
+    print(f'Дата: {dat}')
+    return dat
+
 # Функция для получения абсолютного пути изображения
 def find_images(root_dir):
     """Ищет все изображения в корневой директории и возвращает путь"""
@@ -167,6 +185,7 @@ def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entr
             try:
                 # Получаем дату создания файла (ctime)
                 file_creation_time = os.path.getctime(image_path)
+                
                 # Форматируем дату в формате "ГГГГ:ММ:ДД"
                 date_taken = datetime.datetime.fromtimestamp(file_creation_time).strftime('%Y:%m:%d')
                 #print(f"Используем дату файла: {date_taken} для {image_path}")
