@@ -1,5 +1,5 @@
 import os
-import sorter
+from src.sorter import photosorter
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import json
@@ -77,7 +77,7 @@ def execute_process():
         save_config()
         
         # Передаем функцию обновления прогресса в sorter.photosorter
-        result_message = sorter.photosorter(
+        result_message = photosorter(
             source_dir,
             target_dir,
             mode,
