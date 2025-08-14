@@ -1,4 +1,4 @@
-import os, datetime, pickle
+import os, datetime, pickle, shutil
 from pathlib import Path
 from PIL import Image
 from geopy.geocoders import Nominatim
@@ -7,21 +7,39 @@ from PIL.ExifTags import TAGS
 
 # Функция для получения даты из имени файла
 def get_date_images(name):
-    dat = None
-    # IMG-20171007-WA*.jpeg
-    if name.startswith('IMG-'):
-        dat = datetime.datetime.strptime(name[4:14], '%Y%m%d')
-    # IMG_20171006_*.jpg
-    if name.startswith('IMG_'):
-        dat = datetime.datetime.strptime(name[4:14], '%Y%m%d')
-    # photo_*@24-03-2025_*.jpg
-    if name.startswith('photo_'):
-        if name.endswith('.jpg'):
-            dat = datetime.datetime.strptime(name[6:16], '%d-%m-%Y')
-        else:
-            dat = datetime.datetime.strptime(name[6:16], '%d-%m-%Y')
-    print(f'Дата: {dat}')
-    return dat
+    if not isinstance(name, str):
+        return None
+        
+    try:
+        # IMG-20171007-WA*.jpeg
+        if name.startswith('IMG-') and len(name) >= 12:
+            return datetime.datetime.strptime(name[4:12], '%Y%m%d')
+        
+        # IMG_20171006_*.jpg
+        if name.startswith('IMG_') and len(name) >= 12:
+            return datetime.datetime.strptime(name[4:12], '%Y%m%d')
+        
+        # 20250804_125529.jpg
+        if len(name) >= 15 and name[8] == '_' and name[:8].isdigit():
+            return datetime.datetime.strptime(name[:8], "%Y%m%d")
+
+        # Новый формат: photo_*@DD-MM-YYYY_*.jpg
+        if name.startswith('photo_') and '@' in name:
+            at_pos = name.find('@')
+            date_part = name[at_pos+1:at_pos+11]  # DD-MM-YYYY (10 chars)
+            if len(date_part) == 10 and date_part[2] == '-' and date_part[5] == '-':
+                return datetime.datetime.strptime(date_part, '%d-%m-%Y')
+        
+        # Старый формат: photo_DD-MM-YYYY_*.jpg
+        if name.startswith('photo_') and len(name) >= 16:
+            date_part = name[6:16]  # DD-MM-YYYY (10 chars)
+            if date_part[2] == '-' and date_part[5] == '-':
+                return datetime.datetime.strptime(date_part, '%d-%m-%Y')
+                
+    except (ValueError, IndexError):
+        pass  # Если что-то пошло не так, просто возвращаем None
+    
+    return None
 
 # Функция для получения абсолютного пути изображения
 def find_images(root_dir):
@@ -147,21 +165,26 @@ def exif_gps_to_decimal(exif_data):
         return None
 
 
-def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entries=0):
+def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entries=0, geo_rou = 3):
     msg = 'ok'
+    geo_rou=int(geo_rou)
+
     try:
         image_path = Path(image_path)
         target_dir = Path(target_dir)
         
+        date_from_name = get_date_images(image_path.name)
+        #print(type(date_from_name),date_from_name)        
         # Чтение оригинальных метаданных файла
         orig_stat = os.stat(image_path)
         orig_create_time = orig_stat.st_ctime
         orig_modify_time = orig_stat.st_mtime
-        
+        #print(image_path,orig_modify_time)
+
         # Открытие изображения и чтение EXIF
         img = Image.open(image_path)
         exif_dict = {}
-        
+        rotation = False
         # Проверка наличия EXIF
         if hasattr(img, "_getexif"):
             exif_data = img._getexif()
@@ -176,6 +199,7 @@ def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entr
                 rotation_angle = compute_rotation_angle(exif_dict.get("Orientation"))
                 if rotation_angle != 0:
                     img = img.rotate(rotation_angle, expand=True)
+                    rotation = True
         
         # Извлечение даты съёмки
         date_taken = exif_dict.get("DateTimeOriginal")
@@ -194,19 +218,27 @@ def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entr
                 print(msg)
                 return msg, geo_cache, new_entries
         
+        if date_from_name:
+            # конвертируем из строки в дату
+            date_obj = datetime.datetime.strptime(date_taken[:10], "%Y:%m:%d")
+            # сравниваем даты
+            if date_obj > date_from_name:
+                # конвертируем из даты в строку
+                date_taken = datetime.datetime.strftime(date_from_name, '%Y:%m:%d')
+
         # Базовая структура директории
         base_folder = target_dir / date_taken[:10].replace(':', '-')
         address = ""
-        rou = 3
+        
         # Обработка геолокационных данных, если они существуют
         if mode=='geotag' and exif_dict.get("GPSInfo"):
             lat, lon = exif_gps_to_decimal(exif_dict)
             #print(lat,lon)
             if lat:
                 try:
-                    cache_key = f"{round(lat, rou)},{round(lon, rou)}"
+                    cache_key = f"{round(lat, geo_rou)},{round(lon, geo_rou)}"
                     #cache_key = f"{lat},{lon}"
-                    print(cache_key)
+                    # print(cache_key)
                     if cache_key in geo_cache:
                         address = geo_cache[cache_key]
                     else:
@@ -233,17 +265,21 @@ def process_image(image_path, target_dir,mode='create', geo_cache=None, new_entr
         final_output_path = output_folder / image_path.name
         
         # Сохранение обработанного изображения
-        img.save(final_output_path)
-        
-        # Возвращаем исходные временные метаданные
-        os.utime(final_output_path, (orig_create_time, orig_modify_time))
+        if rotation:
+            img.save(final_output_path)
+            # Возвращаем исходные временные метаданные
+            #os.utime(final_output_path, (orig_create_time, orig_modify_time))
+            #print('Rotation',final_output_path,orig_modify_time)
+        else:
+            shutil.copy2(image_path,final_output_path)
+            #print('---Rotation',image_path,final_output_path)
     
     except Exception as e:
         msg = f"Ошибка при обработке {image_path}: {e}"
         print(msg)
     return msg, geo_cache, new_entries
 
-def photosorter(s,d,mode, progress_callback=None):
+def photosorter(s, d, mode, progress_callback=None, geo_rou=3):
     # Имя файла для кэша
     CACHE_FILE = "photosorter_cache.pkl"
     # Загружаем кэш из файла, если он существует
@@ -261,7 +297,7 @@ def photosorter(s,d,mode, progress_callback=None):
     if os.path.exists(source_directory):
         all_images = find_images(source_directory)
         if mode=='count':
-            msg = f'Будет обработано {len(all_images)} файлов'
+            msg = f'Будет обработано {len(all_images)} файлов. geo_rou:{geo_rou}'
             return msg
         total_files = len(all_images)
         #for image_path in all_images:
@@ -269,9 +305,11 @@ def photosorter(s,d,mode, progress_callback=None):
             res, geo_cache, new_entries = process_image(
                 image_path, 
                 destination_directory,
-                mode=mode,
-                geo_cache= geo_cache,
-                new_entries= new_entries)
+                mode = mode,
+                geo_cache = geo_cache,
+                new_entries = new_entries,
+                geo_rou = geo_rou
+                )
             # Обновляем прогресс
             if progress_callback:
                 progress_callback(i, total_files)

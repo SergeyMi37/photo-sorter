@@ -1,5 +1,5 @@
 import os
-from src.sorter import photosorter
+from sorter import photosorter
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import json
@@ -11,6 +11,7 @@ def load_config():
     default_config = {
         "source_dir": os.getcwd(),
         "target_dir": "",
+        "geo_round": 3,
         "mode_index": 0
     }
     try:
@@ -26,6 +27,7 @@ def save_config():
     config = {
         "source_dir": source_entry.get(),
         "target_dir": target_entry.get(),
+        "geo_round": round_entry.get(),
         "mode_index": mode_combobox.current()
     }
     with open(CONFIG_FILE, 'w') as f:
@@ -75,13 +77,14 @@ def execute_process():
     try:
         # Сохраняем текущие настройки
         save_config()
-        
+
         # Передаем функцию обновления прогресса в sorter.photosorter
         result_message = photosorter(
             source_dir,
             target_dir,
             mode,
-            progress_callback=update_progress
+            progress_callback=update_progress,
+            geo_rou=round_entry.get()
         )
         messagebox.showinfo("Информация", f"Операция '{mode}' выполнена.\n{result_message}")
     except Exception as e:
@@ -93,6 +96,62 @@ def execute_process():
         execute_button.config(state=tk.NORMAL)
         exit_button.config(state=tk.NORMAL)
 
+class CreateToolTip:
+    def __init__(self, widget, text='widget info'):
+        self.waittime = 500   # задержка перед показом в миллисекундах
+        self.wraplength = 180 # длина строки текста подсказки
+        self.widget = widget
+        self.text = text
+        
+        # привязываем события Enter и Leave
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
+        
+        self.id = None
+        self.tw = None
+
+    def enter(self, event=None):
+        self.schedule()
+    
+    def leave(self, event=None):
+        self.unschedule()
+        self.hidetip()
+    
+    def schedule(self):
+        self.unschedule()
+        self.id = self.widget.after(self.waittime, self.showtip)
+    
+    def unschedule(self):
+        id = self.id
+        self.id = None
+        if id:
+            self.widget.after_cancel(id)
+    
+    def showtip(self, event=None):
+        x = y = 0
+        x, y, _, _ = self.widget.bbox("insert")  # координаты позиции внутри виджета
+        x += self.widget.winfo_rootx() + 25      # добавляем смещение относительно окна приложения
+        y += self.widget.winfo_rooty() + 20
+        
+        # создаём временное окно сверху текущего виджета
+        self.tw = tk.Toplevel(self.widget)
+        self.tw.wm_overrideredirect(True)       # скрываем стандартное оформление окна
+        self.tw.wm_geometry("+%d+%d" % (x, y))  # устанавливаем позицию окна
+        
+        # создаем лейбл с текстом подсказки
+        label = tk.Label(self.tw, text=self.text, justify='left',
+                        background="#ffffff", relief='solid', borderwidth=1,
+                        wraplength=self.wraplength)
+        label.pack(ipadx=1)
+    
+    def hidetip(self):
+        tw = self.tw
+        self.tw = None
+        if tw:
+            tw.destroy()
+
+#==============================================================
 # Настройка основного окна
 root = tk.Tk()
 root.title("Фото-Сортировка. Создание поддиректорий с датой создания и переворотом при необходимости")
@@ -141,6 +200,14 @@ execute_button.grid(row=2, column=2, sticky='w')
 
 exit_button = tk.Button(root, text="Выход", command=lambda: [save_config(), root.destroy()])
 exit_button.grid(row=3, column=1, sticky='w')
+
+round_entry = tk.Entry(root, width=10)
+round_entry.insert(0, config.get("geo_round",4))
+round_entry.grid(row=3, column=2, padx=(5, 0))
+
+
+# Создание всплывающей подсказки
+entry_tool_tip = CreateToolTip(round_entry, 'Точность геокодирования, количество знаков после запятой у широты и долготы.')
 
 # Прогресс-бар и метка (изначально скрыты)
 progress_bar = ttk.Progressbar(root, orient="horizontal", length=830, mode="determinate")
