@@ -1,11 +1,11 @@
 
 ## Фото-сортировцик с созданием поддиректорий с датой создания, переворотом и обратным геокодированием на основе EXIF данных
+
 Если имя файла имеет формат:
-
-IMG-20171007-WA*.jpeg
-IMG_20171006_*.jpg
-photo_*@24-03-2025_*.jpg
-
+20210801_12121.jpg
+IMG-20171007-WA1111.jpeg
+IMG_20171006_1111.jpg
+photo_111@24-03-2025_2222.jpg
 и дата создания позднее, то в директорию берется дата из имени файла
 
 ``` bash
@@ -90,14 +90,7 @@ pyinstaller --onefile --windowed --icon doc/icon.ico --add-data "./doc/icon.ico;
 4. Установите необходимые настройки для установки (например, создание ярлыков на рабочем столе и в меню "Пуск").
 5. Соберите готовый инсталляционный пакет, нажав соответствующую кнопку.
 
-Таким образом, у вас получится полноценное приложение с удобным процессом установки.
-
-Следуя этим шагам, вы сможете легко собирать релизы ваших приложений на Tkinter для Windows.\[[1](https://www.pythonguis.com/tutorials/packaging-tkinter-applications-windows-pyinstaller/)]\[[2](https://www.pythonguis.com/tutorials/packaging-tkinter-applications-windows-pyinstaller/)]
-
-*Для ответа использовал актуальные интернет-источники:*
-
- 1. [www.pythonguis.com: Packaging Tkinter applications for Windows, with PyInstaller...](https://www.pythonguis.com/tutorials/packaging-tkinter-applications-windows-pyinstaller/)
- 2. [www.pythonguis.com: Packaging Tkinter applications for Windows, with PyInstaller...](https://www.pythonguis.com/tutorials/packaging-tkinter-applications-windows-pyinstaller/)
- 3. [coderslegacy.com: Using Tkinter with Python Pyinstaller to create Exe - CodersLegacy](https://coderslegacy.com/python/tkinter-pyinstaller/)
- 4. [habr.com: Tkinter: кратко для начинающих / Песочница / Хабр](https://habr.com/ru/sandbox/182102/)
- 5. [medium.com: Building Cross-Platform Applications with Tkinter and... | Medium](https://medium.com/tomtalkspython/building-cross-platform-applications-with-tkinter-and-pyinstaller-d7a10163c550)
+#### Тестирование конвертации дат из имени файла
+```bash
+pytest test_image_dates.py -v
+```
